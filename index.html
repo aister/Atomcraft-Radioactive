@@ -1,0 +1,138 @@
+<style>
+  body {
+    background: #5a5a5a;
+    color: white;
+  }
+  select {
+    padding: 10px;
+    width: calc(50% - 2px);
+    border-width: 1px;
+    margin-bottom: 10px;
+  }
+  #result {
+    display: flex;
+    text-align: center;
+  }
+  .result {
+    width: 50%;
+  }
+  .reaction {
+    display: flex;
+    align-items: end;
+    padding: 10px 0;
+  }
+  .reaction > * {
+    width: calc(100% / 3);
+  }
+  .element {
+    cursor: pointer;
+  }
+  #resultOutput, #resultInput {
+    margin-top: 10px;
+  }
+  .reactionType {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .reactionType span {
+    display: block;
+    width: 100%;
+  }
+  .reactionType div {
+    width: calc(100% - 5px);
+    border-bottom: 2px solid white;
+    margin-right: -10px;
+    height: 7px;
+  }
+  .reactionType img {
+    width: 15px;
+  }
+  .highlight {
+    font-weight: bold;
+  }
+  .element.highlight {
+    color: #66ee66;
+  }
+</style>
+<select id="element"><option disabled selected hidden>----Select an element----</option></select>
+<select id="isotope"><option disabled selected hidden>----None----</option></select>
+<div id="result">
+  <div class="result"><div class="highlight">Input</div><div id="resultInput"></div></div>
+  <div class="result"><div class="highlight">Output</div><div id="resultOutput"></div></div>
+</div>
+<script src="./reactions.js"></script>
+<script>
+  const reactionType = {
+    d: "- decay",
+    p: "+ proton",
+    n: "+ neutron",
+    a: "+ alpha"
+  }
+  const htmlTemplate = (start, type, end, hlStart) => `
+    <div class="reaction">
+      <a class="element${hlStart ? " highlight" : ""}" onclick="displayResult('${start}', false)">${start}</a>
+      <div class="reactionType">
+        <span>${type}</span>
+        <div></div>
+        <img src="./arrow.png">
+      </div>
+      <a class="element${hlStart ? "" : " highlight"}" onclick="displayResult('${end}', true)">${end}</a>
+    </div>
+  `
+  const elementSelect = document.getElementById("element");
+  const isotopeSelect = document.getElementById("isotope");
+  for (let es in elements) {
+    elementSelect.innerHTML += `<option value="${es}">${es}</option>`;
+  }
+  elementSelect.onchange = () => {
+    let element = elements[elementSelect.value];
+    let rs = `<option disabled selected hidden>----Select an isotope----</option><option value="All">All</option>`
+    for (let i in element) {
+      if (typeof element[i] == "string") {
+        displayResult(elementSelect.value, 2);
+        rs = `<option disabled selected hidden>----None----</option>`
+      }
+      else rs += `<option value="${i}">${i}</option>`;
+    }
+    isotopeSelect.innerHTML = rs;
+  }
+  isotopeSelect.onchange = () => {
+    displayResult(`${elementSelect.value}-${isotopeSelect.value}`, 2);
+  }
+  const displayResult = isotope => {
+    let html = [];
+    let iso = isotope.split("-");
+    let element = elements[iso[0]];
+    if (iso[1] == "All") {
+      for (let neutronCount in element) {
+        for (let reaction in element[neutronCount]) {
+          html.push(htmlTemplate(`${iso[0]}-${neutronCount}`, reactionType[reaction], element[neutronCount][reaction], true));
+        }
+      }
+    } else {
+      if (iso.length > 1) element = element[iso[1]];
+      for (let reaction in element) {
+        html.push(htmlTemplate(isotope, reactionType[reaction], element[reaction], true));
+      }
+    }
+    resIn.innerHTML = html.join("");
+    html = [];
+    for (element in elements) {
+      let elementValue = elements[element];
+      for (neutronCount in elementValue) {
+        let nValue = elementValue[neutronCount];
+        if (typeof nValue == "string") {
+          if (nValue == isotope) html.push(htmlTemplate(element, reactionType[neutronCount], isotope, false));
+        } else { 
+          for (reaction in nValue) {
+            if (nValue[reaction] == isotope || (isotope.endsWith("-All") && nValue[reaction].startsWith(isotope.slice(0, -4)))) html.push(htmlTemplate(`${element}-${neutronCount}`, reactionType[reaction], nValue[reaction], false));
+          }
+        }
+      }
+    }
+    resOut.innerHTML = html.join("");
+  }
+  const resIn = document.getElementById("resultInput");
+  const resOut = document.getElementById("resultOutput");
+  displayResult("Plutonium", true);
+</script>
